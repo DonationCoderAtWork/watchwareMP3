@@ -2,6 +2,12 @@
 
 A full-featured MP3 player app designed specifically for Android based / Wear OS smartwatches.
 
+If you continue to use it, i would really appreciate if you return a little bit of the value, that you received by this app.
+Use the Sponsor button / Github Sponsors program for this.
+I intentionally do not sell my apps, but to focus more of my time, money is needed to cover my costs.
+
+Thank you
+
 ## Features
 
 - Browse and play audio files directly from your Wear OS device

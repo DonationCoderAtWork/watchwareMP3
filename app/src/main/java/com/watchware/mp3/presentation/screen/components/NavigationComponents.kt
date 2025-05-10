@@ -125,7 +125,7 @@ fun AppTitleHeader() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = ">  watchwareMP3 1.1",
+            text = ">  watchwareMP3 1.2",
             style = MaterialTheme.typography.title3,
             maxLines = 1
         )

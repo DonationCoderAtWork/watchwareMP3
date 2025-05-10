@@ -379,10 +379,12 @@ class AudioPlayerService(private val context: Context) {
             return
         }
         
-        // Sort the original playlist alphabetically
-        val sortedList = _originalOrderedPlaylist.sortedBy { it.name.lowercase() }
+        // Sort the original playlist alphabetically by name
+        val sortedList = _originalOrderedPlaylist.toList().sortedBy { 
+            it.name.lowercase().trim() 
+        }
         
-        // Find the current song in the sorted list
+        // Find the current song in the sorted list by matching paths
         val newIndex = sortedList.indexOfFirst { it.path == currentSong.path }
         
         // Update the playlist with the sorted list
@@ -390,6 +392,9 @@ class AudioPlayerService(private val context: Context) {
         
         // Set the current index to the position of the current song, or 0 if not found
         _currentIndex.value = if (newIndex >= 0) newIndex else 0
+        
+        // Log for debugging
+        android.util.Log.d("AudioPlayerService", "Restored alphabetical order: ${sortedList.map { it.name }}")
         
         // Save the sorted playlist
         savePlaylist(sortedList, _currentIndex.value)

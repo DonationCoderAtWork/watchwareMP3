@@ -1,0 +1,23 @@
+# Changelog
+
+Notable changes to WatchWare MP3 will be documented in this file.
+
+## [1.1.0] - 2025-05-10
+
+### Added
+- Shuffle functionality in player view
+
+### Changed
+- UI improvements to ensure clean and minimal interface
+- Bottom button bar now only contains play/pause and next buttons
+
+## [1.0.0] - Initial Release
+
+### Added
+- Browse and play audio files directly from your Wear OS device
+- Watch-optimized Material Design interface
+- Background playback
+- Bluetooth headphone controls support
+- Album art display
+- Volume control with mute function
+- Progress slider for navigation within tracks

@@ -2,12 +2,6 @@
 
 A full-featured MP3 player app designed specifically for Android based / Wear OS smartwatches.
 
-If you continue to use it, i would really appreciate if you return a little bit of the value, that you received by this app.
-Use the Sponsor button / Github Sponsors program for this.
-I intentionally do not sell my apps, but to focus more of my time, money is needed to cover my costs.
-
-Thank you
-
 ## Features
 
 - Browse and play audio files directly from your Wear OS device
@@ -21,12 +15,12 @@ Thank you
 Here's a look at WatchWare MP3 in action:
 
 ### Media Browser Screen
-![Media Browser Screen](doc/images/Screenshot1.png)
+![Media Browser Screen](doc/Screenshot1.png)
 
 The media browser allows you to navigate through your audio files and folders directly on your watch. 
 
 ### Player Interface
-![Player Interface](doc/images/Screenshot2.png)
+![Player Interface](doc/Screenshot2.png)
 
 The player screen features:
 - Album artwork that dynamically influences the UI color theme
@@ -35,12 +29,13 @@ The player screen features:
 - Automatic fading of controls after period of inactivity for distraction-free viewing
 
 ### Advanced Playback Controls
-![Advanced Playback Controls](doc/images/Screenshot3.png)
+![Advanced Playback Controls](doc/Screenshot3.png)
 
 Additional features include:
 - Volume control with mute function
-- Music visualization options (experimental)
+- Music visualization options
 - Optimized for small screen visibility while maintaining full functionality
+- Support for playlist navigation
 
 ## Requirements
 
@@ -54,31 +49,63 @@ Additional features include:
 To install WatchWare MP3 on your Wear OS device:
 
 1. Download the latest APK from the [Releases](https://github.com/your-username/watchwareMP3/releases) page
-
+2. Enable developer mode on your watch (Settings > System > About > tap Build number 7 times)
 3. Enable ADB debugging on the watch
 4. Install using ADB: `adb install -r watchwareMP3.apk`
 
-## Install via ADB
-This is currently a bit tricky and still leaves room to be optimized 
+Alternatively, you can build from source:
 
-1. Download the latest APK from the [Releases](https://github.com/your-username/watchwareMP3/releases) page
-2. Enable developer mode on your watch (Settings > System > About > tap Build number 7 times)
-3. Enable Wireless Debuggin in developer options
-4. Sideload it to your watch using adb. For sideloading from Android, i recommend GeminiMan: https://play.google.com/store/apps/details?id=com.geminiman.wearosmanager&hl=en_US
-5. Transfer music to your phone using LocalSend - also required to be sideloaded via adb: https://f-droid.org/de/packages/org.localsend.localsend_app/
-6. Manage your music files (sideload via adb): https://f-droid.org/de/packages/com.martinmimigames.simplefileexplorer/
+1. Clone this repository
+2. Open the project in Android Studio
+3. Build and deploy to your connected Wear OS device
+
+### Transferring Music Files
+
+To add music to your watch:
+
+1. Connect your watch to your computer via USB
+2. Enable file transfer mode on your watch
+3. Copy MP3 files to the `Music` folder on your watch
+4. Safely disconnect and launch the app
 
 ## Support and Donations
 
 If you find WatchWare MP3 useful, please consider supporting its development:
 
-1. **Donate** - Your financial support helps cover development costs and enables new features
-2. **Spread the word** - Tell other Wear OS users about this app
+1. **Spread the word** - Tell other Wear OS users about this app
+2. **Provide feedback** - Open issues on GitHub for bugs or feature requests
+3. **Contribute code** - Pull requests are welcome
+4. **Donate** - Your financial support helps cover development costs and enables new features
 
-Donations directly influence the development. 
+Donations directly influence which features get prioritized. Even small contributions make a big difference!
 
-# About watchware by DonationCoderAtWork - Apps for your Android based Smartwatch
-### Moving from smartphone to smartwatch
+## Contributing
+
+Contributions are welcome! If you'd like to help improve WatchWare MP3:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Frequently Asked Questions
+
+**Q: Why does the app need storage permissions?**  
+A: The app needs access to your device's storage to find and play audio files stored on your watch.
+
+**Q: Will this app drain my watch battery?**  
+A: WatchWare MP3 is optimized for Wear OS devices, but playing music will use battery. For extended listening, consider connecting to power.
+
+**Q: Can I control playback from my phone?**  
+A: Currently, the app is designed to work independently on your watch. Phone-based controls may be added in future versions.
+
+**Q: Does this work with all Wear OS watches?**  
+A: The app should work on most Wear OS devices running version 3.0 or higher with sufficient storage space.
+
+## About watchware apps
+
+### From SMART-PHONE to Dumb-PHONE with SMART-watch.
 
 **What?** - Apps for your Android based Smartwatch like Galaxy-/Pixel-/Xiaomi-Watch (Maybe Huawei).\
 **Why?** - Use your watch more for whats important and your phone less for what in the end is just stealing time.\
@@ -109,7 +136,6 @@ Under the following terms:
 
 See the [LICENSE.md](LICENSE.md) file for full details.
 
-## Changelog
+## Release Notes
 
-v1.0.0 - Initial release
-v1.1.0 - Added random play/shuffle functionality
+For a detailed list of changes and version history, please see the [CHANGELOG.md](CHANGELOG) file.

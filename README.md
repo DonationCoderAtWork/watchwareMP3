@@ -108,3 +108,8 @@ Under the following terms:
 - NonCommercial — You may not use the material for commercial purposes
 
 See the [LICENSE.md](LICENSE.md) file for full details.
+
+## Changelog
+
+v1.0.0 - Initial release
+v1.1.0 - Added random play/shuffle functionality

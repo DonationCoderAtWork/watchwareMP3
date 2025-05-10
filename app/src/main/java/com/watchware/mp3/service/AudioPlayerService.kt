@@ -65,6 +65,9 @@ class AudioPlayerService(private val context: Context) {
     private val _playlistItems = MutableStateFlow<List<MediaItem.AudioFile>>(emptyList())
     val playlistItems: StateFlow<List<MediaItem.AudioFile>> = _playlistItems.asStateFlow()
     
+    // Original ordered playlist (for restoring from shuffle)
+    private var _originalOrderedPlaylist = listOf<MediaItem.AudioFile>()
+    
     // Current index in the playlist
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
@@ -193,6 +196,10 @@ class AudioPlayerService(private val context: Context) {
      */
     fun setPlaylist(audioFiles: List<MediaItem.AudioFile>, startIndex: Int = 0) {
         _playlistItems.value = audioFiles
+        
+        // Store original ordered playlist for restoring from shuffle
+        _originalOrderedPlaylist = audioFiles.toList()
+        
         if (audioFiles.isNotEmpty() && startIndex in audioFiles.indices) {
             _currentIndex.value = startIndex
             playAudio(audioFiles[startIndex])
@@ -323,10 +330,69 @@ class AudioPlayerService(private val context: Context) {
      * Format milliseconds to minutes:seconds format
      */
     fun formatTime(millis: Long): String {
+        if (millis <= 0) return "0:00"
+        
         val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - 
-                      TimeUnit.MINUTES.toSeconds(minutes)
-        return String.format(Locale.US, "%d:%02d", minutes, seconds)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(minutes)
+        
+        return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+    }
+    
+    /**
+     * Shuffles the current playlist but keeps the currently playing song as the first item
+     */
+    fun shufflePlaylist() {
+        val currentPlaylist = _playlistItems.value
+        if (currentPlaylist.size <= 1) return
+        
+        val currentSong = _currentMediaItem.value ?: return
+        
+        // Create a mutable list for shuffling
+        val shuffledList = currentPlaylist.toMutableList()
+        
+        // Remove current song from the list that will be shuffled
+        shuffledList.remove(currentSong)
+        
+        // Shuffle the remaining songs
+        shuffledList.shuffle()
+        
+        // Re-add the current song at the beginning
+        shuffledList.add(0, currentSong)
+        
+        // Update the playlist
+        _playlistItems.value = shuffledList
+        _currentIndex.value = 0
+        
+        // Save the shuffled playlist
+        savePlaylist(shuffledList, 0)
+    }
+    
+    /**
+     * Restores the playlist to alphabetical order
+     */
+    fun restoreAlphabeticalOrder() {
+        val currentSong = _currentMediaItem.value ?: return
+        
+        // Make sure we have the original playlist
+        if (_originalOrderedPlaylist.isEmpty()) {
+            // If original playlist is empty, there's nothing to restore
+            return
+        }
+        
+        // Sort the original playlist alphabetically
+        val sortedList = _originalOrderedPlaylist.sortedBy { it.name.lowercase() }
+        
+        // Find the current song in the sorted list
+        val newIndex = sortedList.indexOfFirst { it.path == currentSong.path }
+        
+        // Update the playlist with the sorted list
+        _playlistItems.value = sortedList
+        
+        // Set the current index to the position of the current song, or 0 if not found
+        _currentIndex.value = if (newIndex >= 0) newIndex else 0
+        
+        // Save the sorted playlist
+        savePlaylist(sortedList, _currentIndex.value)
     }
     
     fun release() {

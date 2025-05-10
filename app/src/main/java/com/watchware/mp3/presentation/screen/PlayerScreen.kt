@@ -425,7 +425,7 @@ fun PlayerScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // Playback controls - Now with consistently sized buttons and the visualize button where the next button was
+                        // Playback controls - Now with consistently sized buttons and the shuffle button
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -473,23 +473,24 @@ fun PlayerScreen(
                                 )
                             }
                             
-                            // Visualization toggle button - Now in the spot where next button was
+                            // Shuffle button - Replacing visualization button
+                            val isShuffleMode = viewModel.isShuffleMode.collectAsState().value
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(buttonShape)
                                     .background(dominantColor.copy(alpha = 0.7f))
                                     .clickable { 
-                                        showVisualization = true
                                         updateInteractionTime()
+                                        viewModel.toggleShuffleMode()
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_visualize),
-                                    contentDescription = "Show visualizer",
+                                    painter = painterResource(id = R.drawable.ic_shuffle),
+                                    contentDescription = if (isShuffleMode) "Disable Shuffle Mode" else "Enable Shuffle Mode",
                                     modifier = Modifier.size(24.dp),
-                                    tint = textColor
+                                    tint = if (isShuffleMode) accentColor else textColor
                                 )
                             }
                         }

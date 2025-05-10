@@ -32,6 +32,10 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _isPlayerActive = MutableStateFlow(false)
     val isPlayerActive: StateFlow<Boolean> = _isPlayerActive.asStateFlow()
     
+    // Shuffle mode state
+    private val _isShuffleMode = MutableStateFlow(false)
+    val isShuffleMode: StateFlow<Boolean> = _isShuffleMode.asStateFlow()
+    
     val currentAudioFile = audioPlayerService.currentMediaItem
     val isPlaying = audioPlayerService.isPlaying
     val playbackProgress = audioPlayerService.progress
@@ -211,6 +215,26 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     fun closePlayer() {
         _isPlayerActive.value = false
         // Removed audioPlayerService.pause() to allow continuous playback when switching views
+    }
+    
+    /**
+     * Toggles shuffle mode for the playlist
+     * When enabled, shuffles the playlist
+     * When disabled, restores the playlist to alphabetical order
+     * @return the new shuffle state
+     */
+    fun toggleShuffleMode(): Boolean {
+        _isShuffleMode.value = !_isShuffleMode.value
+        
+        if (_isShuffleMode.value) {
+            // Shuffle the playlist
+            audioPlayerService.shufflePlaylist()
+        } else {
+            // Restore original order (alphabetical by name)
+            audioPlayerService.restoreAlphabeticalOrder()
+        }
+        
+        return _isShuffleMode.value
     }
     
     override fun onCleared() {

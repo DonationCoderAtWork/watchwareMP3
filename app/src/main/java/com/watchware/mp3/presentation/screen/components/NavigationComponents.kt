@@ -41,10 +41,10 @@ fun NavigationHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(32.dp)
             .background(MaterialTheme.colors.surface)
             .padding(start = 42.dp, end = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom
     ) {
         // Back button
         Icon(
@@ -95,7 +95,8 @@ fun NavigationHeader(
                 .padding(horizontal = 6.dp) // Add padding on both sides
                 .onGloballyPositioned { coordinates ->
                     containerWidth.value = coordinates.size.width
-                }
+                },
+            contentAlignment = Alignment.BottomStart
         ) {
             Text(
                 text = displayText,
@@ -119,10 +120,10 @@ fun AppTitleHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(32.dp)
             .background(MaterialTheme.colors.surface)
             .padding(horizontal = 22.dp), // More padding on sides
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom
     ) {
         Text(
             text = ">  watchwareMP3 1.2",

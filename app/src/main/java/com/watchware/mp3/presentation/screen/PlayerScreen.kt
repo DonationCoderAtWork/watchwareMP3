@@ -313,56 +313,96 @@ fun PlayerScreen(
                                 .alpha(controlsAlpha),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Volume low/mute button
+                            // Minus button for decreasing volume
                             Icon(
-                                painter = painterResource(
-                                    id = if (isMuted || volume <= 0f) R.drawable.ic_volume_mute 
-                                         else R.drawable.ic_volume_low
-                                ),
-                                contentDescription = if (isMuted) "Unmute" else "Mute",
+                                painter = painterResource(id = R.drawable.ic_volume_low),
+                                contentDescription = "Decrease Volume",
                                 modifier = Modifier
                                     .size(ButtonDefaults.SmallIconSize)
-                                    .clickable { toggleMute() },
+                                    .clickable { 
+                                        // Decrease volume by 2% (0.02), but don't go below 0
+                                        val newVolume = (volume - 0.02f).coerceAtLeast(0f)
+                                        viewModel.setVolume(newVolume)
+                                        // If we're at zero, we're muted
+                                        if (newVolume <= 0f) {
+                                            isMuted = true
+                                        } else if (isMuted) {
+                                            // If previously muted and now > 0, unmute
+                                            isMuted = false
+                                        }
+                                        updateInteractionTime()
+                                    },
                                 tint = textColor
                             )
                             
-                            // Material3 Slider for volume control with themed colors
-                            Slider(
-                                value = if (isInteractingWithVolumeSlider) userVolumePosition else volume,
-                                onValueChange = { 
-                                    isInteractingWithVolumeSlider = true
-                                    userVolumePosition = it
-                                    // Update in real-time for immediate feedback
-                                    viewModel.setVolume(it)
-                                    // If volume is raised above 0, we're no longer muted
-                                    if (it > 0f && isMuted) {
-                                        isMuted = false
-                                    }
-                                    // Update interaction time
-                                    updateInteractionTime()
-                                },
-                                onValueChangeFinished = {
-                                    isInteractingWithVolumeSlider = false
-                                    // If user set volume to zero, we consider it muted
-                                    if (userVolumePosition <= 0f) {
-                                        isMuted = true
-                                    }
-                                },
-                                valueRange = 0f..1f,
+                            // Box to contain both the volume percentage text and slider
+                            Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(20.dp), // Make the slider smaller
-                                colors = SliderDefaults.colors(
-                                    thumbColor = accentColor,
-                                    activeTrackColor = accentColor.copy(alpha = 0.7f),
-                                    inactiveTrackColor = accentColor.copy(alpha = 0.3f)
+                                    .height(20.dp), // Keep the same height as the slider
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Volume percentage text in the background
+                                Text(
+                                    text = "${(if (isInteractingWithVolumeSlider) userVolumePosition else volume) * 100}%".split(".")[0],
+                                    style = MaterialTheme.typography.body2.copy(
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    color = textColor.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
                                 )
-                            )
+                                
+                                // Material3 Slider for volume control with themed colors
+                                Slider(
+                                    value = if (isInteractingWithVolumeSlider) userVolumePosition else volume,
+                                    onValueChange = { 
+                                        isInteractingWithVolumeSlider = true
+                                        userVolumePosition = it
+                                        // Update in real-time for immediate feedback
+                                        viewModel.setVolume(it)
+                                        // If volume is raised above 0, we're no longer muted
+                                        if (it > 0f && isMuted) {
+                                            isMuted = false
+                                        }
+                                        // Update interaction time
+                                        updateInteractionTime()
+                                    },
+                                    onValueChangeFinished = {
+                                        isInteractingWithVolumeSlider = false
+                                        // If user set volume to zero, we consider it muted
+                                        if (userVolumePosition <= 0f) {
+                                            isMuted = true
+                                        }
+                                    },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(20.dp), // Make the slider smaller
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = accentColor,
+                                        activeTrackColor = accentColor.copy(alpha = 0.7f),
+                                        inactiveTrackColor = accentColor.copy(alpha = 0.3f)
+                                    )
+                                )
+                            }
                             
+                            // Plus button for increasing volume
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_volume_high),
-                                contentDescription = "Volume High",
-                                modifier = Modifier.size(ButtonDefaults.SmallIconSize),
+                                contentDescription = "Increase Volume",
+                                modifier = Modifier
+                                    .size(ButtonDefaults.SmallIconSize)
+                                    .clickable { 
+                                        // Increase volume by 2% (0.02), but don't exceed 1
+                                        val newVolume = (volume + 0.02f).coerceAtMost(1f)
+                                        viewModel.setVolume(newVolume)
+                                        // If volume is raised above 0, we're no longer muted
+                                        if (newVolume > 0f && isMuted) {
+                                            isMuted = false
+                                        }
+                                        updateInteractionTime()
+                                    },
                                 tint = textColor
                             )
                         }

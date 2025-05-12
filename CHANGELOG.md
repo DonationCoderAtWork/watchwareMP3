@@ -2,7 +2,16 @@
 
 Notable changes to WatchWare MP3 will be documented in this file.
 
-## [1.1.0] - 2025-05-10
+## [1.3.0] - 2025-05-10
+
+### Added
+- Volume slider now shows volume percentage
+
+### Changed
+- Mute function replaced by using the buttons to increase or decrease the volume
+- Header in browser view less high to make more room for whats important
+
+## [1.2.0] - 2025-05-10
 
 ### Added
 - Shuffle functionality in player view

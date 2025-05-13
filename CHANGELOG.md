@@ -4,6 +4,7 @@ Notable changes to WatchWare MP3 will be documented in this file.
 
 ## [1.4.0] - 2025-05-13
 - Jump volume by 5% instead of 2% since the OS does not support lower increments anyway
+- Player: Fix volume to react to volume changes via OS/Bluetooth
 
 ## [1.3.0] - 2025-05-10
 

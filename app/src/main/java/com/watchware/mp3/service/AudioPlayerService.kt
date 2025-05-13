@@ -1,6 +1,8 @@
 package com.watchware.mp3.service
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
@@ -45,6 +47,16 @@ class AudioPlayerService(private val context: Context) {
     
     // Media Session for handling media button events from Bluetooth headsets
     private var mediaSession: MediaSession? = null
+    
+    // Volume change receiver to detect system volume changes (Bluetooth/OS)
+    private val volumeChangeReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                // Update our volume state to match system volume
+                refreshVolume()
+            }
+        }
+    }
     
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -98,6 +110,7 @@ class AudioPlayerService(private val context: Context) {
     init {
         initializePlayer()
         initializeMediaSession()
+        registerVolumeChangeReceiver()
         // Don't automatically restore last played song, it will be done by the ViewModel
     }
     
@@ -189,6 +202,14 @@ class AudioPlayerService(private val context: Context) {
     
     fun refreshVolume() {
         _volume.value = getSystemVolume()
+    }
+    
+    /**
+     * Register a broadcast receiver to listen for volume changes made outside the app
+     */
+    private fun registerVolumeChangeReceiver() {
+        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        context.registerReceiver(volumeChangeReceiver, filter)
     }
     
     /**
@@ -402,6 +423,12 @@ class AudioPlayerService(private val context: Context) {
     
     fun release() {
         stopProgressUpdates()
+        // Unregister volume change receiver
+        try {
+            context.unregisterReceiver(volumeChangeReceiver)
+        } catch (e: Exception) {
+            // Receiver might not be registered
+        }
         mediaSession?.release()
         mediaSession = null
         player?.release()

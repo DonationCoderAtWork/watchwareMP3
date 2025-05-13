@@ -426,7 +426,15 @@ fun PlayerScreen(
                                 style = MaterialTheme.typography.body2,
                                 color = textColor,
                                 textAlign = TextAlign.Start,
-                                modifier = Modifier.width(36.dp)
+                                modifier = Modifier
+                                    .width(36.dp)
+                                    .clickable { 
+                                        // Jump back 1 minute (60,000 ms) when clicked
+                                        val newPosition = (currentPosition - 60000).coerceAtLeast(0)
+                                        val newPositionFraction = if (duration > 0) newPosition.toFloat() / duration.toFloat() else 0f
+                                        viewModel.seekToPosition(newPositionFraction)
+                                        updateInteractionTime()
+                                    }
                             )
                             
                             // Interactive progress bar with themed colors
@@ -459,7 +467,15 @@ fun PlayerScreen(
                                 style = MaterialTheme.typography.body2,
                                 color = textColor,
                                 textAlign = TextAlign.End,
-                                modifier = Modifier.width(36.dp)
+                                modifier = Modifier
+                                    .width(36.dp)
+                                    .clickable { 
+                                        // Jump forward 1 minute (60,000 ms) when clicked
+                                        val newPosition = (currentPosition + 60000).coerceAtMost(duration)
+                                        val newPositionFraction = if (duration > 0) newPosition.toFloat() / duration.toFloat() else 0f
+                                        viewModel.seekToPosition(newPositionFraction)
+                                        updateInteractionTime()
+                                    }
                             )
                         }
                         

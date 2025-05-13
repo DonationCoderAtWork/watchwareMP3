@@ -12,10 +12,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.watchware.mp3.data.model.MediaItem
-import com.watchware.mp3.util.GsonHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,13 +29,6 @@ class AudioPlayerService(private val context: Context) {
 
     // Add a companion object with constants
     companion object {
-        private const val PREFS_NAME = "MediaPlayerPrefs"
-        private const val KEY_LAST_PLAYED_PATH = "lastPlayedPath" 
-        private const val KEY_LAST_PLAYED_NAME = "lastPlayedName"
-        private const val KEY_LAST_PLAYED_MIME_TYPE = "lastPlayedMimeType"
-        private const val KEY_LAST_PLAYLIST_DIRECTORY = "lastPlaylistDirectory"
-        private const val KEY_LAST_PLAYLIST = "lastPlaylist"
-        private const val KEY_LAST_PLAYLIST_INDEX = "lastPlaylistIndex"
         private const val PROGRESS_UPDATE_INTERVAL = 200L
     }
 
@@ -57,6 +47,9 @@ class AudioPlayerService(private val context: Context) {
             }
         }
     }
+    
+    // Lazy-initialized persistence manager
+    private val persistenceManager by lazy { AudioPlayerPersistenceManager(context) }
     
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -227,27 +220,7 @@ class AudioPlayerService(private val context: Context) {
         }
         
         // Save the playlist whenever it's set
-        savePlaylist(audioFiles, startIndex)
-    }
-    
-    /**
-     * Save the playlist to SharedPreferences
-     */
-    private fun savePlaylist(playlist: List<MediaItem.AudioFile>, currentIndex: Int) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val editor = prefs.edit()
-        
-        try {
-            // Use our improved playlist serialization method
-            val playlistJson = GsonHelper.serializePlaylist(playlist)
-            
-            // Save playlist and current index
-            editor.putString(KEY_LAST_PLAYLIST, playlistJson)
-            editor.putInt(KEY_LAST_PLAYLIST_INDEX, currentIndex)
-            editor.apply()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        persistenceManager.savePlaylist(audioFiles, startIndex)
     }
     
     /**
@@ -283,7 +256,14 @@ class AudioPlayerService(private val context: Context) {
             extractArtwork(audioFile.path)
             
             // Save as the last played song
-            saveLastPlayedSong(audioFile)
+            persistenceManager.saveLastPlayedSong(audioFile)
+            
+            // Also save the playlist position
+            _currentIndex.value.let { currentIndex ->
+                if (currentIndex != -1) {
+                    persistenceManager.savePlaylist(_playlistItems.value, currentIndex)
+                }
+            }
         }
     }
     
@@ -385,7 +365,7 @@ class AudioPlayerService(private val context: Context) {
         _currentIndex.value = 0
         
         // Save the shuffled playlist
-        savePlaylist(shuffledList, 0)
+        persistenceManager.savePlaylist(shuffledList, 0)
     }
     
     /**
@@ -418,7 +398,7 @@ class AudioPlayerService(private val context: Context) {
         android.util.Log.d("AudioPlayerService", "Restored alphabetical order: ${sortedList.map { it.name }}")
         
         // Save the sorted playlist
-        savePlaylist(sortedList, _currentIndex.value)
+        persistenceManager.savePlaylist(sortedList, _currentIndex.value)
     }
     
     fun release() {
@@ -472,214 +452,38 @@ class AudioPlayerService(private val context: Context) {
     }
     
     /**
-     * Save last played song information to SharedPreferences
-     */
-    private fun saveLastPlayedSong(audioFile: MediaItem.AudioFile) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        
-        // Get the directory of the current file
-        val fileUri = Uri.parse(audioFile.path)
-        val fileDirectory = fileUri.path?.substringBeforeLast('/') ?: ""
-        
-        prefs.edit().apply {
-            putString(KEY_LAST_PLAYED_PATH, audioFile.path)
-            putString(KEY_LAST_PLAYED_NAME, audioFile.name)
-            putString(KEY_LAST_PLAYED_MIME_TYPE, audioFile.mimeType)
-            putString(KEY_LAST_PLAYLIST_DIRECTORY, fileDirectory)
-            apply()
-        }
-        
-        // Also save the entire playlist and current index
-        _currentIndex.value.let { index ->
-            if (index != -1) {
-                savePlaylist(_playlistItems.value, index)
-            }
-        }
-    }
-
-    /**
      * Restore the last played song from SharedPreferences
      * This doesn't automatically play the song, just sets it as current
      * Returns true if successful, false otherwise
      */
     fun restoreLastPlayedSong(): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val lastPath = prefs.getString(KEY_LAST_PLAYED_PATH, null)
-        val lastName = prefs.getString(KEY_LAST_PLAYED_NAME, null)
-        val lastMimeType = prefs.getString(KEY_LAST_PLAYED_MIME_TYPE, "audio/mpeg")
+        val lastPlaybackState = persistenceManager.restoreLastPlayedSong() ?: return false
         
-        // Try to restore the saved playlist first
-        val playlistJson = prefs.getString(KEY_LAST_PLAYLIST, null)
-        val lastIndex = prefs.getInt(KEY_LAST_PLAYLIST_INDEX, -1)
-        
-        var success = false
-        
-        // First attempt: Try to restore from saved playlist JSON
-        if (playlistJson != null && lastIndex != -1) {
-            try {
-                // Use our improved playlist deserialization method
-                val playlist = GsonHelper.deserializePlaylist(playlistJson)
-                
-                if (playlist.isNotEmpty() && lastIndex < playlist.size) {
-                    // Set the playlist and current index
-                    _playlistItems.value = playlist
-                    _currentIndex.value = lastIndex
-                    
-                    // Get the current item based on saved index
-                    val currentAudioFile = playlist[lastIndex]
-                    _currentMediaItem.value = currentAudioFile
-                    
-                    // Prepare the player with the current media item
-                    try {
-                        val uri = Uri.parse(currentAudioFile.path)
-                        val mediaItem = ExoMediaItem.fromUri(uri)
-                        player?.setMediaItem(mediaItem)
-                        player?.prepare()
-                        
-                        // Extract artwork if available
-                        extractArtwork(currentAudioFile.path)
-                        
-                        success = true
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        // Continue to fallback method
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Continue to fallback method
-            }
+        try {
+            // Set the playlist
+            _playlistItems.value = lastPlaybackState.playlist
+            // Also save the original ordered playlist
+            _originalOrderedPlaylist = lastPlaybackState.playlist.toList()
+            
+            // Set the current index
+            _currentIndex.value = lastPlaybackState.currentIndex
+            
+            // Set the current media item
+            _currentMediaItem.value = lastPlaybackState.audioFile
+            
+            // Prepare the player with the current media item
+            val uri = Uri.parse(lastPlaybackState.audioFile.path)
+            val mediaItem = ExoMediaItem.fromUri(uri)
+            player?.setMediaItem(mediaItem)
+            player?.prepare()
+            
+            // Extract artwork if available
+            extractArtwork(lastPlaybackState.audioFile.path)
+            
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
         }
-        
-        // Second attempt (fallback): Try to restore from last played song info
-        if (!success && lastPath != null && lastName != null) {
-            val audioFile = MediaItem.AudioFile(
-                name = lastName,
-                path = lastPath,
-                mimeType = lastMimeType ?: "audio/mpeg"
-            )
-            
-            // Initialize an empty list for audio files
-            var audioFiles = emptyList<MediaItem.AudioFile>()
-            val lastDirectory = prefs.getString(KEY_LAST_PLAYLIST_DIRECTORY, null)
-            
-            // Find or recreate the playlist based on the directory of the last played file
-            if (lastDirectory != null) {
-                val directory = java.io.File(lastDirectory)
-                if (directory.exists() && directory.isDirectory) {
-                    // Use content resolver to get all audio files in the same directory
-                    try {
-                        val contentResolver = context.contentResolver
-                        val uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                        val selection = "${android.provider.MediaStore.Audio.Media.DATA} LIKE ?"
-                        val selectionArgs = arrayOf("$lastDirectory/%")
-                        val cursor = contentResolver.query(
-                            uri,
-                            arrayOf(
-                                android.provider.MediaStore.Audio.Media.DISPLAY_NAME,
-                                android.provider.MediaStore.Audio.Media.DATA,
-                                android.provider.MediaStore.Audio.Media.MIME_TYPE
-                            ),
-                            selection,
-                            selectionArgs,
-                            "${android.provider.MediaStore.Audio.Media.DISPLAY_NAME} ASC"
-                        )
-                        
-                        cursor?.use { c ->
-                            val nameColumn = c.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DISPLAY_NAME)
-                            val pathColumn = c.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATA)
-                            val mimeTypeColumn = c.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.MIME_TYPE)
-                            
-                            val tempList = mutableListOf<MediaItem.AudioFile>()
-                            
-                            while (c.moveToNext()) {
-                                val name = c.getString(nameColumn)
-                                val path = c.getString(pathColumn)
-                                val mimeType = c.getString(mimeTypeColumn)
-                                
-                                tempList.add(MediaItem.AudioFile(
-                                    name = name,
-                                    path = path,
-                                    mimeType = mimeType
-                                ))
-                            }
-                            
-                            audioFiles = tempList
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        // Fallback to the file-based approach
-                        audioFiles = directory.listFiles { file ->
-                            file.isFile && (
-                                file.name.lowercase().endsWith(".mp3") ||
-                                file.name.lowercase().endsWith(".wav") ||
-                                file.name.lowercase().endsWith(".ogg") ||
-                                file.name.lowercase().endsWith(".aac")
-                            )
-                        }?.sortedBy { it.name }?.map { file ->
-                            MediaItem.AudioFile(
-                                name = file.name,
-                                path = file.absolutePath,
-                                mimeType = when {
-                                    file.name.lowercase().endsWith(".mp3") -> "audio/mpeg"
-                                    file.name.lowercase().endsWith(".wav") -> "audio/wav"
-                                    file.name.lowercase().endsWith(".ogg") -> "audio/ogg"
-                                    file.name.lowercase().endsWith(".aac") -> "audio/aac"
-                                    else -> "audio/mpeg"
-                                }
-                            )
-                        } ?: emptyList()
-                    }
-                }
-            }
-            
-            // If we couldn't find any files in the directory, at least add the current file to the playlist
-            if (audioFiles.isEmpty()) {
-                audioFiles = listOf(audioFile)
-            }
-            
-            // Always ensure we have a valid playlist
-            _playlistItems.value = audioFiles
-            
-            // Find the index of the restored song in the playlist
-            val index = audioFiles.indexOfFirst { it.path == lastPath }
-            
-            // If we found the index, update it; otherwise, set it to 0 if we have files
-            if (index != -1) {
-                _currentIndex.value = index
-            } else if (audioFiles.isNotEmpty()) {
-                _currentIndex.value = 0
-            }
-            
-            // Only set as current, don't play
-            _currentMediaItem.value = audioFile
-            
-            // Create MediaItem from URI for ExoPlayer, but don't start playback
-            try {
-                val uri = Uri.parse(lastPath)
-                val mediaItem = ExoMediaItem.fromUri(uri)
-                player?.setMediaItem(mediaItem)
-                player?.prepare()
-                
-                // Extract artwork if available
-                extractArtwork(lastPath)
-                
-                success = true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Failed both attempts
-            }
-        }
-        
-        // Save the restored playlist again to ensure it's in the correct format for next time
-        if (success) {
-            _currentIndex.value.let { index ->
-                if (index != -1 && _playlistItems.value.isNotEmpty()) {
-                    savePlaylist(_playlistItems.value, index)
-                }
-            }
-        }
-        
-        return success
     }
 }

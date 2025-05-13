@@ -32,9 +32,8 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _isPlayerActive = MutableStateFlow(false)
     val isPlayerActive: StateFlow<Boolean> = _isPlayerActive.asStateFlow()
     
-    // Shuffle mode state
-    private val _isShuffleMode = MutableStateFlow(false)
-    val isShuffleMode: StateFlow<Boolean> = _isShuffleMode.asStateFlow()
+    // Proper exposure of the shuffle state as a StateFlow
+    val isShuffleMode: StateFlow<Boolean> = audioPlayerService.isShuffled
     
     val currentAudioFile = audioPlayerService.currentMediaItem
     val isPlaying = audioPlayerService.isPlaying
@@ -224,9 +223,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
      * @return the new shuffle state
      */
     fun toggleShuffleMode(): Boolean {
-        _isShuffleMode.value = !_isShuffleMode.value
-        
-        if (_isShuffleMode.value) {
+        if (!audioPlayerService.isShuffled.value) {
             // Shuffle the playlist
             audioPlayerService.shufflePlaylist()
         } else {
@@ -234,7 +231,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             audioPlayerService.restoreAlphabeticalOrder()
         }
         
-        return _isShuffleMode.value
+        return audioPlayerService.isShuffled.value
     }
     
     override fun onCleared() {

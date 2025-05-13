@@ -81,6 +81,10 @@ class AudioPlayerService(private val context: Context) {
     private val _embeddedArtwork = MutableStateFlow<Bitmap?>(null)
     val embeddedArtwork: StateFlow<Bitmap?> = _embeddedArtwork.asStateFlow()
     
+    // Track if playlist is shuffled
+    private val _isShuffled = MutableStateFlow(false)
+    val isShuffled: StateFlow<Boolean> = _isShuffled.asStateFlow()
+    
     // Volume control
     private val _volume = MutableStateFlow(getSystemVolume())
     val mediaVolume: StateFlow<Float> = _volume.asStateFlow()
@@ -214,13 +218,16 @@ class AudioPlayerService(private val context: Context) {
         // Store original ordered playlist for restoring from shuffle
         _originalOrderedPlaylist = audioFiles.toList()
         
+        // Reset shuffle state when setting a new playlist
+        _isShuffled.value = false
+        
         if (audioFiles.isNotEmpty() && startIndex in audioFiles.indices) {
             _currentIndex.value = startIndex
             playAudio(audioFiles[startIndex])
         }
         
         // Save the playlist whenever it's set
-        persistenceManager.savePlaylist(audioFiles, startIndex)
+        persistenceManager.savePlaylist(audioFiles, startIndex, _isShuffled.value)
     }
     
     /**
@@ -261,7 +268,7 @@ class AudioPlayerService(private val context: Context) {
             // Also save the playlist position
             _currentIndex.value.let { currentIndex ->
                 if (currentIndex != -1) {
-                    persistenceManager.savePlaylist(_playlistItems.value, currentIndex)
+                    persistenceManager.savePlaylist(_playlistItems.value, currentIndex, _isShuffled.value)
                 }
             }
         }
@@ -364,8 +371,11 @@ class AudioPlayerService(private val context: Context) {
         _playlistItems.value = shuffledList
         _currentIndex.value = 0
         
-        // Save the shuffled playlist
-        persistenceManager.savePlaylist(shuffledList, 0)
+        // Set shuffle state to true
+        _isShuffled.value = true
+        
+        // Save the shuffled playlist along with shuffle state
+        persistenceManager.savePlaylist(shuffledList, 0, true)
     }
     
     /**
@@ -394,25 +404,53 @@ class AudioPlayerService(private val context: Context) {
         // Set the current index to the position of the current song, or 0 if not found
         _currentIndex.value = if (newIndex >= 0) newIndex else 0
         
+        // Set shuffle state to false
+        _isShuffled.value = false
+        
         // Log for debugging
         android.util.Log.d("AudioPlayerService", "Restored alphabetical order: ${sortedList.map { it.name }}")
         
-        // Save the sorted playlist
-        persistenceManager.savePlaylist(sortedList, _currentIndex.value)
+        // Save the sorted playlist with shuffle state
+        persistenceManager.savePlaylist(sortedList, _currentIndex.value, false)
     }
     
-    fun release() {
-        stopProgressUpdates()
-        // Unregister volume change receiver
+    /**
+     * Restore the last played song from SharedPreferences
+     * This doesn't automatically play the song, just sets it as current
+     * Returns true if successful, false otherwise
+     */
+    fun restoreLastPlayedSong(): Boolean {
+        val lastPlaybackState = persistenceManager.restoreLastPlayedSong() ?: return false
+        
         try {
-            context.unregisterReceiver(volumeChangeReceiver)
+            // Set the playlist
+            _playlistItems.value = lastPlaybackState.playlist
+            // Also save the original ordered playlist
+            _originalOrderedPlaylist = lastPlaybackState.playlist.toList()
+            
+            // Set the current index
+            _currentIndex.value = lastPlaybackState.currentIndex
+            
+            // Set the current media item
+            _currentMediaItem.value = lastPlaybackState.audioFile
+            
+            // Set the shuffle state
+            _isShuffled.value = lastPlaybackState.isShuffled
+            
+            // Prepare the player with the current media item
+            val uri = Uri.parse(lastPlaybackState.audioFile.path)
+            val mediaItem = ExoMediaItem.fromUri(uri)
+            player?.setMediaItem(mediaItem)
+            player?.prepare()
+            
+            // Extract artwork if available
+            extractArtwork(lastPlaybackState.audioFile.path)
+            
+            return true
         } catch (e: Exception) {
-            // Receiver might not be registered
+            e.printStackTrace()
+            return false
         }
-        mediaSession?.release()
-        mediaSession = null
-        player?.release()
-        player = null
     }
     
     /**
@@ -451,39 +489,17 @@ class AudioPlayerService(private val context: Context) {
         }
     }
     
-    /**
-     * Restore the last played song from SharedPreferences
-     * This doesn't automatically play the song, just sets it as current
-     * Returns true if successful, false otherwise
-     */
-    fun restoreLastPlayedSong(): Boolean {
-        val lastPlaybackState = persistenceManager.restoreLastPlayedSong() ?: return false
-        
+    fun release() {
+        stopProgressUpdates()
+        // Unregister volume change receiver
         try {
-            // Set the playlist
-            _playlistItems.value = lastPlaybackState.playlist
-            // Also save the original ordered playlist
-            _originalOrderedPlaylist = lastPlaybackState.playlist.toList()
-            
-            // Set the current index
-            _currentIndex.value = lastPlaybackState.currentIndex
-            
-            // Set the current media item
-            _currentMediaItem.value = lastPlaybackState.audioFile
-            
-            // Prepare the player with the current media item
-            val uri = Uri.parse(lastPlaybackState.audioFile.path)
-            val mediaItem = ExoMediaItem.fromUri(uri)
-            player?.setMediaItem(mediaItem)
-            player?.prepare()
-            
-            // Extract artwork if available
-            extractArtwork(lastPlaybackState.audioFile.path)
-            
-            return true
+            context.unregisterReceiver(volumeChangeReceiver)
         } catch (e: Exception) {
-            e.printStackTrace()
-            return false
+            // Receiver might not be registered
         }
+        mediaSession?.release()
+        mediaSession = null
+        player?.release()
+        player = null
     }
 }

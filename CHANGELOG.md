@@ -6,6 +6,7 @@ Notable changes to WatchWare MP3 will be documented in this file.
 - Jump volume by 5% instead of 2% since the OS does not support lower increments anyway
 - Player: Fix volume to react to volume changes via OS/Bluetooth
 - Player: Time labels are now clickable - left jumps backward 1 minute, right jumps forward 1 minute
+- Player: Minor fix: Now recognizes that the restored playlist has been shuffled
 
 ## [1.3.0] - 2025-05-10
 

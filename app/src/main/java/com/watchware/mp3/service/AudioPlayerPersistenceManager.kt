@@ -21,12 +21,13 @@ class AudioPlayerPersistenceManager(private val context: Context) {
         private const val KEY_LAST_PLAYLIST_DIRECTORY = "lastPlaylistDirectory"
         private const val KEY_LAST_PLAYLIST = "lastPlaylist"
         private const val KEY_LAST_PLAYLIST_INDEX = "lastPlaylistIndex"
+        private const val KEY_IS_PLAYLIST_SHUFFLED = "isPlaylistShuffled"
     }
 
     /**
      * Save the playlist to SharedPreferences
      */
-    fun savePlaylist(playlist: List<MediaItem.AudioFile>, currentIndex: Int) {
+    fun savePlaylist(playlist: List<MediaItem.AudioFile>, currentIndex: Int, isShuffled: Boolean = false) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val editor = prefs.edit()
         
@@ -34,13 +35,30 @@ class AudioPlayerPersistenceManager(private val context: Context) {
             // Use our improved playlist serialization method
             val playlistJson = GsonHelper.serializePlaylist(playlist)
             
-            // Save playlist and current index
+            // Save playlist, current index, and shuffle state
             editor.putString(KEY_LAST_PLAYLIST, playlistJson)
             editor.putInt(KEY_LAST_PLAYLIST_INDEX, currentIndex)
+            editor.putBoolean(KEY_IS_PLAYLIST_SHUFFLED, isShuffled)
             editor.apply()
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    /**
+     * Save the playlist shuffle state
+     */
+    fun saveShuffleState(isShuffled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_IS_PLAYLIST_SHUFFLED, isShuffled).apply()
+    }
+
+    /**
+     * Get the playlist shuffle state
+     */
+    fun getShuffleState(): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_IS_PLAYLIST_SHUFFLED, false)
     }
 
     /**
@@ -71,6 +89,7 @@ class AudioPlayerPersistenceManager(private val context: Context) {
         val lastPath = prefs.getString(KEY_LAST_PLAYED_PATH, null)
         val lastName = prefs.getString(KEY_LAST_PLAYED_NAME, null)
         val lastMimeType = prefs.getString(KEY_LAST_PLAYED_MIME_TYPE, "audio/mpeg")
+        val isShuffled = prefs.getBoolean(KEY_IS_PLAYLIST_SHUFFLED, false)
         
         // Try to restore the saved playlist first
         val playlistJson = prefs.getString(KEY_LAST_PLAYLIST, null)
@@ -87,7 +106,8 @@ class AudioPlayerPersistenceManager(private val context: Context) {
                     return LastPlaybackState(
                         audioFile = currentAudioFile,
                         playlist = playlist,
-                        currentIndex = lastIndex
+                        currentIndex = lastIndex,
+                        isShuffled = isShuffled
                     )
                 }
             } catch (e: Exception) {
@@ -137,7 +157,8 @@ class AudioPlayerPersistenceManager(private val context: Context) {
             return LastPlaybackState(
                 audioFile = audioFile,
                 playlist = audioFiles,
-                currentIndex = finalIndex
+                currentIndex = finalIndex,
+                isShuffled = isShuffled
             )
         }
         
@@ -219,6 +240,7 @@ class AudioPlayerPersistenceManager(private val context: Context) {
     data class LastPlaybackState(
         val audioFile: MediaItem.AudioFile,
         val playlist: List<MediaItem.AudioFile>,
-        val currentIndex: Int
+        val currentIndex: Int,
+        val isShuffled: Boolean = false
     )
 }

@@ -320,8 +320,8 @@ fun PlayerScreen(
                                 modifier = Modifier
                                     .size(ButtonDefaults.SmallIconSize)
                                     .clickable { 
-                                        // Decrease volume by 2% (0.02), but don't go below 0
-                                        val newVolume = (volume - 0.02f).coerceAtLeast(0f)
+                                        // Decrease volume by 5% (0.05), but don't go below 0
+                                        val newVolume = (volume - 0.05f).coerceAtLeast(0f)
                                         viewModel.setVolume(newVolume)
                                         // If we're at zero, we're muted
                                         if (newVolume <= 0f) {
@@ -394,8 +394,8 @@ fun PlayerScreen(
                                 modifier = Modifier
                                     .size(ButtonDefaults.SmallIconSize)
                                     .clickable { 
-                                        // Increase volume by 2% (0.02), but don't exceed 1
-                                        val newVolume = (volume + 0.02f).coerceAtMost(1f)
+                                        // Increase volume by 5% (0.05), but don't exceed 1
+                                        val newVolume = (volume + 0.05f).coerceAtMost(1f)
                                         viewModel.setVolume(newVolume)
                                         // If volume is raised above 0, we're no longer muted
                                         if (newVolume > 0f && isMuted) {
